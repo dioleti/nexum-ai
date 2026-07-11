@@ -1,37 +1,29 @@
 import os
-import requests
-from typing import Callable, Optional, Dict, Generator, Union
+from typing import Optional, Dict, Generator, Union, Type
 
-from internal.exceptions.nexum_value_error import NexumValueError
+import requests
+from nexum.errors import NexumValueError
+from nexum.streams import BaseStreamLoader  # supondo que esteja nesse módulo
 
 
 class PDFReader:
+    """
+    Streaming PDF ingestion engine.
+
+    This reader retrieves PDF bytes from various sources (local files or HTTP/HTTPS URLs)
+    in a memory‑efficient streaming fashion. It supports both custom loader classes
+    implementing the BaseStreamLoader protocol and the built‑in default loader.
+    """
+
     def __init__(
         self,
-        loader: Optional[Callable[[str], Generator[bytes, None, None]]] = None,
+        loader_cls: Optional[Type[BaseStreamLoader]] = None,
         proxies: Optional[Dict[str, str]] = None,
         timeout: int = 30,
         verify: Union[bool, str] = True,
-        chunk_size: int = 65536,  # 64 KB chunks
+        chunk_size: int = 65536,
     ):
-        """
-        Streaming PDF ingestion engine.
-
-        :param loader: Optional custom loader function that receives a path/URI
-                       and returns a generator yielding PDF bytes in chunks.
-
-        :param proxies: Optional HTTP/HTTPS proxy configuration.
-
-        :param timeout: Timeout for HTTP requests.
-
-        :param verify: SSL/TLS certificate verification:
-                       - True  → system CA bundle
-                       - False → disable verification
-                       - "/path/to/ca.pem" → corporate CA bundle
-
-        :param chunk_size: Size of each chunk yielded during streaming.
-        """
-        self.loader = loader or self._default_loader
+        self.loader_cls = loader_cls
         self.proxies = proxies
         self.timeout = timeout
         self.verify = verify
@@ -41,50 +33,25 @@ class PDFReader:
         self.session.proxies = proxies or {}
         self.session.verify = verify
 
-    def _default_loader(self, source: str) -> Generator[bytes, None, None]:
-        """
-        Default loader supporting:
-        - Local files (streaming)
-        - HTTP/HTTPS URLs (streaming)
-        """
-        if source.startswith("http://") or source.startswith("https://"):
-            return self._load_http_stream(source)
+    def _default_loader(self, source: str) -> BaseStreamLoader:
+        if source.startswith(("http://", "https://")):
+            return HTTPStreamLoader(source, self.session, self.chunk_size)
 
-        if os.path.exists(source):
-            return self._load_local_stream(source)
+        if os.path.isfile(source):
+            return LocalFileLoader(source, self.chunk_size)
 
         raise NexumValueError(f"Unsupported source format or file not found: {source}")
 
-    def _load_local_stream(self, path: str) -> Generator[bytes, None, None]:
-        """Stream PDF bytes from a local file without loading everything into memory."""
-        with open(path, "rb") as f:
-            while True:
-                chunk = f.read(self.chunk_size)
-                if not chunk:
-                    break
-                yield chunk
-
-    def _load_http_stream(self, url: str) -> Generator[bytes, None, None]:
-        """
-        Stream PDF bytes from an HTTP/HTTPS URL.
-        Supports:
-        - proxies
-        - corporate TLS interception
-        - custom CA bundles
-        - chunked transfer encoding
-        """
-        response = self.session.get(url, stream=True, timeout=self.timeout)
-        response.raise_for_status()
-
-        for chunk in response.iter_content(chunk_size=self.chunk_size):
-            if chunk:
-                yield chunk
-
     def read_stream(self, source: str) -> Generator[bytes, None, None]:
         """
-        Return a generator that yields PDF bytes in chunks.
+        Return a generator yielding PDF bytes in chunks.
 
-        :param source: Path or URI pointing to the PDF file.
-        :return: Generator yielding raw PDF bytes.
+        If a custom loader class is provided, it will be instantiated with the source.
+        Otherwise, the default loader will be used.
         """
-        return self.loader(source)
+        if self.loader_cls:
+            loader = self.loader_cls(source)
+        else:
+            loader = self._default_loader(source)
+
+        return loader.stream()
