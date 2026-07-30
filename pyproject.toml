@@ -1,22 +1,26 @@
 [project]
-name = "nexum-public-cloud-storage"
-version = "0.0.1"
-description = "Nexum multicloud file batch and streaming"
+name = "nexum-ai"
+version = "1.0.0"
+description = "Nexum AI Framework"
 readme = "README.md"
 license = "MIT"
 authors = [
     { name = "Dioleti", email = "fabricio@dl.tec.br" }
 ]
 dependencies = [
-    "nexum-public-commons>=0.0.1",
+    "python-dotenv>=1.2.2",
+    "hatch>=1.17.1",
+    "pydantic>=2.0",
     "pytesseract>=0.3.10",
     "pdf2image>=1.17.0",
     "Pillow>=10.0.0",
+    "pypdf>=3.0.0",
     "requests>=2.34.2",
     "opencv-python>=5.0.0.93",
-    "numpy>=2.5.1"
+    "numpy>=2.5.1",
+    "langchain-core>=1.0.0",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 [project.optional-dependencies]
 aws = [
@@ -25,27 +29,67 @@ aws = [
 ]
 azure = [
     "azure-core>=1.41.0",
-    "azure-storage-blob",
-    "azure-identity"
+    "azure-storage-blob>=12.19.0",
+    "azure-identity>=1.17.0"
 ]
 google-cloud = [
     "protobuf>=7.35.1",
     "google-cloud-storage>=3.12.1"
 ]
 smb = [
+    "smbprotocol>=1.17.0"
+]
+datadog = [
+    "ddtrace>=4.11.0"
+]
+elastic = [
+    "elastic-apm>=6.26.2"
+]
+
+dev = [
+    "boto3>=1.43.45",
+    "boto3-stubs~=1.43.45",
+    "azure-core>=1.41.0",
+    "azure-storage-blob>=12.19.0",
+    "azure-identity>=1.17.0",
+    "protobuf>=7.35.1",
+    "google-cloud-storage>=3.12.1",
     "smbprotocol>=1.17.0",
-    "python3-ldap>=0.9.8.4"
+    "ddtrace>=4.11.0",
+    "elastic-apm>=6.26.2",
+    "mypy>=2.3.0",
+    "mypy-boto3-s3"
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.pytest.ini_options]
+import_mode = "importlib"
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/nexum_cloud_storage"]
+packages = ["src/"]
 
 [tool.mypy]
 ignore_missing_imports = true
 namespace_packages = true
 explicit_package_bases = true
 mypy_path = "src"
+exclude = [
+    "src/nexum/common/logging.py",
+    ".venv",
+    "tests/"
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "mypy-boto3-s3"
+]
+
+[tool.ruff]
+exclude = ["tests/", "src/nexum/common/logging.py"]
+
+[tool.ruff.lint]
+ignore = ["BLE001"]
