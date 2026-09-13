@@ -1,8 +1,8 @@
 import csv
 import logging
-from datetime import UTC, date, datetime
 from typing import Any
 
+from nexum.common.helpers.type import infer
 from nexum.document.models import CSVReaderConfig, Table
 from nexum.document.parser.base import BaseParser
 
@@ -15,31 +15,10 @@ class CSVParser(BaseParser):
         super().__init__(resolved_config)
         self.config: CSVReaderConfig = resolved_config
 
-    def _infer_type(self, value: str) -> Any:
-        v = value.strip()
-        if v == "":
-            return None
-        if v.isdigit():
-            return int(v)
-        try:
-            return float(v)
-        except Exception as exc:
-            logger.error(exc)
-        if v.lower() in ("true", "false"):
-            return v.lower() == "true"
-        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
-            try:
-                if fmt == "%Y-%m-%d":
-                    return date.fromisoformat(v)
-                return datetime.strptime(v, fmt).replace(tzinfo=UTC).date()
-            except Exception as exc:
-                logger.error(exc)
-        return v
-
     def _apply_type_inference(self, rows: list[list[str]]) -> list[list[Any]]:
         if not self.config.infer_types:
             return rows
-        return [[self._infer_type(cell) for cell in row] for row in rows]
+        return [[infer(cell) for cell in row] for row in rows]
 
     def _parse_rows(self, text: str) -> list[list[str]]:
         reader = csv.reader(text.splitlines(), delimiter=self.config.delimiter)

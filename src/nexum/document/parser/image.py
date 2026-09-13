@@ -3,10 +3,11 @@ import logging
 
 import cv2
 import numpy as np
-import pytesseract
 from PIL import Image
 
 from nexum.common.errors import NexumRuntimeError
+from nexum.common.helpers.image import deskew, clahe, denoise, sharpen, binarize, run_ocr_data, run_ocr, \
+    validate_max_size
 from nexum.document.models import ImageOCRConfig
 from nexum.document.parser.base import BaseParser
 
@@ -19,43 +20,40 @@ class ImageOCRParser(BaseParser):
         super().__init__(resolved_config)
         self.config: ImageOCRConfig = resolved_config
 
-    def _denoise(self, gray: np.ndarray) -> np.ndarray:
-        if not self.config.enable_denoise:
-            return gray
-        if self.config.denoise_method == "bilateral":
-            return cv2.bilateralFilter(gray, 9, 75, 75)
-        if self.config.denoise_method == "median":
-            return cv2.medianBlur(gray, 3)
-        return gray
-
-    def _sharpen(self, gray: np.ndarray) -> np.ndarray:
-        if not self.config.enable_sharpen:
-            return gray
-        blurred = cv2.GaussianBlur(gray, (0, 0), 3)
-        return cv2.addWeighted(gray, self.config.sharpen_strength, blurred, -0.2, 0)
-
-    def _binarize(self, gray: np.ndarray) -> np.ndarray:
-        if not self.config.enable_binarization:
-            return gray
-        std = gray.std()
-        if std > self.config.binarization_min_std:
-            return cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU)[1]
-        return gray
-
-    def parse(self, image_bytes: bytes) -> str:
+    def parse(self, image_bytes: bytes):
         try:
             pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-            gray = cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2GRAY)
-            gray = self._denoise(gray)
-            gray = self._sharpen(gray)
-            gray = self._binarize(gray)
-            text = pytesseract.image_to_string(gray, lang=self.config.lang)
-            text = text.replace("\x0c", "")
+            arr = np.array(pil)
+            validate_max_size(arr)
+
+            gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+
+            if self.config.enable_deskew:
+                gray = deskew(gray)
+            if self.config.enable_clahe:
+                gray = clahe(gray, self.config.clahe_clip_limit, self.config.clahe_tile_size)
+            if self.config.enable_denoise:
+                gray = denoise(gray, self.config.denoise_method)
+            if self.config.enable_sharpen:
+                gray = sharpen(gray, self.config.sharpen_sigma, self.config.sharpen_strength)
+            if self.config.enable_binarization:
+                gray = binarize(gray, self.config.binarization_method)
+
+            if self.config.return_structured:
+                data = run_ocr_data(gray)
+                return data
+
+            text = run_ocr(gray)
+
             if self.config.strip_empty_lines:
                 text = "\n".join(
-                    line.strip() for line in text.splitlines() if line.strip()
+                    " ".join(line.split())
+                    for line in text.splitlines()
+                    if line.strip()
                 )
+
             return text
+
         except Exception as exc:
             logger.error(f"Image OCR failed: {exc}")
             raise NexumRuntimeError(f"Image OCR failed: {exc}")
