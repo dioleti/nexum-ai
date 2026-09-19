@@ -9,7 +9,6 @@ authors = [
 ]
 dependencies = [
     "python-dotenv>=1.2.2",
-    "hatch>=1.17.1",
     "pydantic>=2.0",
     "pytesseract>=0.3.10",
     "pdf2image>=1.17.0",
@@ -18,8 +17,14 @@ dependencies = [
     "requests>=2.34.2",
     "opencv-python>=5.0.0.93",
     "numpy>=2.5.1",
+    "pandas>=2.0.0",
+    "sentence-transformers>=2.2.0",
     "langchain-core>=1.0.0",
     "layoutparser>=0.3.4",
+    "torch>=2.14.0",
+    "transformers>=5.17.0",
+    "ultralytics>=8.1.0",
+    "easyocr>=1.7.2",
 ]
 requires-python = ">=3.12"
 
@@ -59,7 +64,8 @@ dev = [
     "ddtrace>=4.11.0",
     "elastic-apm>=6.26.2",
     "mypy>=2.3.0",
-    "mypy-boto3-s3"
+    "mypy-boto3-s3",
+    "pandas-stubs~=3.0.5"
 ]
 
 [build-system]

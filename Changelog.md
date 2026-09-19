@@ -15,3 +15,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CSV Reader;
 - Image OCR Reader;
 - PDF OCR Reader;
+- Deep Learning models to parsers;

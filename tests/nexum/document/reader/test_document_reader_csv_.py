@@ -1,7 +1,7 @@
 import unittest
 
 from nexum.document.models import CSVReaderConfig, Document
-from nexum.document.reader.csv import CSVReader
+from nexum.document.reader.csv_reader import CSVReader
 
 
 class DummyLoader:
@@ -41,7 +41,7 @@ class TestCSVReader(unittest.TestCase):
 
     def test_detect_encoding_latin1(self):
         loader = DummyLoader("áéí".encode("latin-1"))
-        reader = CSVReader(loader, CSVReaderConfig())
+        reader = CSVReader(loader, CSVReaderConfig(encoding=None))
         encoding = reader._detect_encoding(loader.load())
         self.assertEqual(encoding, "latin-1")
 

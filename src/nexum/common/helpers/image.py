@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Union
+from typing import Union, List
 
 import cv2
 import numpy as np
@@ -8,6 +8,7 @@ import pytesseract
 from PIL import Image
 
 from nexum.common.errors import NexumRuntimeError
+from nexum.document.models import Region, RegionType
 
 logger = logging.getLogger(__name__)
 
@@ -109,12 +110,23 @@ def osd_rotation(image: Image.Image, osd_min_confidence: float = 5.0) -> Image.I
         return image
 
 
-def run_ocr(gray: Union[np.ndarray, Image.Image], lang: str = "eng", oem: int = 1, psm: int = 3) -> str:
-    config = f"--psm {psm} --oem {oem}"
+def run_ocr(
+    gray: Union[np.ndarray, Image.Image],
+    lang: str = "eng",
+    oem: int = 1,
+    psm: int = 6,
+    preserve_spaces: bool = True,
+) -> str:
+    extra_configs = []
+    if preserve_spaces:
+        extra_configs.append("-c preserve_interword_spaces=1")
+
+    config = f"--psm {psm} --oem {oem} " + " ".join(extra_configs)
+
     text = pytesseract.image_to_string(
         gray,
         lang=lang,
-        config=config,
+        config=config.strip(),
     )
     return text.replace("\x0c", "")
 
@@ -136,3 +148,68 @@ def validate_max_size(arr: np.ndarray, max_px: int | None = 20_000_000):
         raise NexumRuntimeError(
             f"Image too large ({total_area} px). Limit is {max_px} px."
         )
+
+
+def ocr_region(pil_image: Image.Image, region: Region) -> str:
+    xmin, ymin, xmax, ymax = region.box
+    crop = pil_image.crop((xmin, ymin, xmax, ymax))
+    text = pytesseract.image_to_string(crop, lang="por")
+    return text.strip()
+
+
+def normalize_ocr_output(ocr_result):
+    if isinstance(ocr_result, str):
+        return ocr_result
+
+    if isinstance(ocr_result, dict):
+        if "text" in ocr_result and ocr_result["text"]:
+            return ocr_result["text"]
+        if "content" in ocr_result and ocr_result["content"]:
+            return ocr_result["content"]
+        if "text_blocks" in ocr_result:
+            blocks = ocr_result["text_blocks"]
+            if isinstance(blocks, list):
+                return "\n".join(
+                    b["text"] if isinstance(b, dict) and "text" in b else str(b)
+                    for b in blocks
+                )
+        return ""
+
+    if hasattr(ocr_result, "text"):
+        return ocr_result.text
+    if hasattr(ocr_result, "content"):
+        return ocr_result.content
+
+    return str(ocr_result)
+
+
+def detect_images_heuristic(pil_image: Image.Image) -> List[Region]:
+    np_img = np.array(pil_image)
+    gray = cv2.cvtColor(np_img, cv2.COLOR_RGB2GRAY)
+
+    edges = cv2.Canny(gray, 80, 160)
+    kernel = np.ones((15, 15), np.uint8)
+    dilated = cv2.dilate(edges, kernel, iterations=2)
+
+    contours, _ = cv2.findContours(
+        dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    regions = []
+
+    for cnt in contours:
+        x, y, w, h = cv2.boundingRect(cnt)
+
+        if w < 80 or h < 80:
+            continue
+
+        regions.append(
+            Region(
+                type=RegionType.IMAGE,
+                box=(x, y, x + w, y + h),
+                score=1.0,
+                text=None
+            )
+        )
+
+    return regions
