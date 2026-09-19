@@ -8,7 +8,7 @@ from PIL import Image
 
 from nexum.common.errors import NexumRuntimeError
 from nexum.document.models import Document, ImageReaderConfig, Table
-from nexum.document.parser.image import ImageOCRParser
+from nexum.document.parser.image_parser import ImageOCRParser
 from nexum.document.reader.base import Reader
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class ImageReader(Reader):
             tables: list[Table] = []
             for cnt in contours:
                 x, y, w, h = cv2.boundingRect(cnt)
-                roi = img[y : y + h, x : x + w]
+                roi = img[y: y + h, x: x + w]
                 _, roi_png = cv2.imencode(".png", roi)
                 text = self.ocr.parse(roi_png.tobytes())
                 lines = [line.strip() for line in text.splitlines() if line.strip()]

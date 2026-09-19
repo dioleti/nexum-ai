@@ -5,7 +5,7 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 
 from nexum.document.models import Document, ImageReaderConfig, Table
-from nexum.document.parser.image import ImageOCRParser
+from nexum.document.parser.image_parser import ImageOCRParser
 from nexum.document.reader.image import ImageReader
 
 

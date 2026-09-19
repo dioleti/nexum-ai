@@ -109,12 +109,23 @@ def osd_rotation(image: Image.Image, osd_min_confidence: float = 5.0) -> Image.I
         return image
 
 
-def run_ocr(gray: Union[np.ndarray, Image.Image], lang: str = "eng", oem: int = 1, psm: int = 3) -> str:
-    config = f"--psm {psm} --oem {oem}"
+def run_ocr(
+    gray: Union[np.ndarray, Image.Image],
+    lang: str = "eng",
+    oem: int = 1,
+    psm: int = 6,
+    preserve_spaces: bool = True,
+) -> str:
+    extra_configs = []
+    if preserve_spaces:
+        extra_configs.append("-c preserve_interword_spaces=1")
+
+    config = f"--psm {psm} --oem {oem} " + " ".join(extra_configs)
+
     text = pytesseract.image_to_string(
         gray,
         lang=lang,
-        config=config,
+        config=config.strip(),
     )
     return text.replace("\x0c", "")
 

@@ -2,7 +2,7 @@ from collections.abc import Generator
 
 from nexum.common.errors import NexumRuntimeError
 from nexum.document.models import CSVReaderConfig, Document
-from nexum.document.parser.csv import CSVParser
+from nexum.document.parser.csv_parser import CSVParser
 from nexum.document.reader.base import Reader
 
 

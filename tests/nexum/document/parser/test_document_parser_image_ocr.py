@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 
 from nexum.document.models import ImageOCRConfig
-from nexum.document.parser.image import ImageOCRParser
+from nexum.document.parser.image_parser import ImageOCRParser
 
 
 class TestImageOCRParser(unittest.TestCase):
