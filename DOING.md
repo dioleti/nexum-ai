@@ -1,0 +1,4 @@
+- [ ] Test multicloud readers and connectors
+- [x] Add deep learning to PDF parser
+- [x] Test document readers
+- [x] Add deep learning models to parsers
