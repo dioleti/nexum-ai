@@ -27,6 +27,14 @@ dependencies = [
     "easyocr>=1.7.2",
     "ipykernel>=7.4.0",
     "weaviate-client>=4.16.7",
+    "tree-sitter",
+    "tree-sitter-python",
+    "tree-sitter-go",
+    "tree-sitter-java",
+    "tree-sitter-rust",
+    "tree-sitter-javascript",
+    "tree-sitter-typescript",
+    "tree-sitter-c-sharp"
 ]
 requires-python = ">=3.12"
 
