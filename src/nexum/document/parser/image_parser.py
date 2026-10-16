@@ -7,15 +7,13 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
-from nexum.common.ai.deep_learning.flowchart_detection import (
-    FlowchartExtractor,
-    FlowchartGraph,
-    FlowchartInput,
-)
 from nexum.common.errors import NexumRuntimeError
 from nexum.common.helpers.image import run_ocr, run_ocr_data
 from nexum.common.helpers.table import extract_table_dataframe
-from nexum.document.models import ImageOCRConfig, Parsed, ImageContext, CaptionInput
+from nexum.detection.flowchart import FlowchartDetectorDL
+from nexum.detection.table import TableDetectorDL
+from nexum.document.models import ImageOCRConfig, Parsed, ImageContext, CaptionInput, FlowchartGraph, FlowchartInput, \
+    TableDetectionInput
 from nexum.document.parser.base import BaseParser
 
 logger = logging.getLogger(__name__)
@@ -77,7 +75,7 @@ class ImageOCRParser(BaseParser):
         )
 
     def _extract_tables(
-        self, ctx: ImageContext
+            self, ctx: ImageContext
     ) -> tuple[list[pd.DataFrame], list[list[Any]]]:
         if not getattr(self.config, "table_as_df", True):
             return [], []
@@ -85,12 +83,7 @@ class ImageOCRParser(BaseParser):
         tables: list[pd.DataFrame] = []
         rows: list[list[Any]] = []
 
-        from nexum.common.ai.deep_learning.table_detection import (
-            TableDetectionInput,
-            TableDetector,
-        )
-
-        detector = getattr(self, "table_detector", None) or TableDetector()
+        detector = getattr(self, "table_detector", None) or TableDetectorDL()
         detected = detector.predict(
             TableDetectionInput(image=ctx.pil, threshold=0.6)
         )
@@ -162,8 +155,8 @@ class ImageOCRParser(BaseParser):
         if not getattr(self.config, "enable_caption", True):
             return None
         try:
-            from nexum.common.ai.deep_learning.image_caption import ImageCaptionModel
-            caption_model = ImageCaptionModel()
+            from nexum.vision.captiongeneratordl import CaptionGeneratorDL
+            caption_model = CaptionGeneratorDL()
             return caption_model.predict(CaptionInput(image=ctx.pil))
         except Exception as exc:
             logger.error(f"Failed to generate caption: {exc}")
@@ -175,7 +168,7 @@ class ImageOCRParser(BaseParser):
 
         try:
 
-            extractor = getattr(self, "flowchart_extractor", None) or FlowchartExtractor()
+            extractor = getattr(self, "flowchart_extractor", None) or FlowchartDetectorDL()
             graph = extractor.predict(
                 FlowchartInput(image=ctx.text_canvas, lang=ctx.lang)
             )
@@ -336,33 +329,3 @@ class ImageOCRParser(BaseParser):
                     blocks.append(cleaned)
 
         return blocks
-
-
-if __name__ == '__main__':
-    from pathlib import Path
-    from pprint import pprint
-
-    image_path = Path(r"D:\docs\complete.png")
-    image_bytes = image_path.read_bytes()
-    config = ImageOCRConfig(
-        lang="por",
-        enable_binarization=False,
-        enable_denoise=False,
-        enable_sharpen=False,
-        enable_clahe=False,
-        clahe_clip_limit=2.0,
-        clahe_tile_size=(8, 8),
-        enable_osd=False,
-        enable_deskew=False,
-        psm=3,
-        table_as_df=True,
-        enable_flowchart=True,
-        enable_caption=True,
-    )
-    parser = ImageOCRParser(config)
-
-    try:
-        resultado = parser.parse(image_bytes)
-        pprint(resultado.dict())
-    except NexumRuntimeError as err:
-        print(f"Falha na execução do OCR: {err}")

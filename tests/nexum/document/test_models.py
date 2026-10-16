@@ -1,7 +1,25 @@
 import unittest
 
-from nexum.document.models import Document, CSVReaderConfig, ImageOCRConfig, ImageReaderConfig, ReaderMode, \
-    PDFOCRConfig, PDFReaderConfig, Table
+from nexum.document.models import (
+    BoundingBox,
+    CSVReaderConfig,
+    CaptionConfig,
+    Document,
+    FlowchartConfig,
+    FlowchartRegion,
+    ImageOCRConfig,
+    ImageReaderConfig,
+    ImageRegion,
+    PDFOCRConfig,
+    PDFReaderConfig,
+    Parsed,
+    ReaderMode,
+    RegionSplitterConfig,
+    Table,
+    TableDetectionConfig,
+    TableRegion,
+    TextBlockRegion,
+)
 
 
 class TestModels(unittest.TestCase):
@@ -38,8 +56,8 @@ class TestModels(unittest.TestCase):
         doc = Document(
             content="abc",
             metadata={"x": 1},
-            images=None,
-            tables=None,
+            images=[],
+            tables=[],
             source="src",
             pages=["abc"],
             raw_bytes=b"123",
@@ -56,7 +74,7 @@ class TestModels(unittest.TestCase):
         self.assertEqual(cfg.delimiter, ",")
         self.assertEqual(cfg.skip_rows, 0)
         self.assertTrue(cfg.has_header)
-        self.assertIsNone(cfg.encoding)
+        self.assertEqual(cfg.encoding, "utf-8")
         self.assertTrue(cfg.infer_types)
 
     def test_image_ocr_config_defaults(self):
@@ -70,6 +88,9 @@ class TestModels(unittest.TestCase):
         self.assertTrue(cfg.enable_denoise)
         self.assertEqual(cfg.denoise_method, "bilateral")
         self.assertTrue(cfg.strip_empty_lines)
+        self.assertTrue(cfg.table_as_df)
+        self.assertTrue(cfg.enable_caption)
+        self.assertTrue(cfg.enable_flowchart)
 
     def test_image_reader_config_defaults(self):
         cfg = ImageReaderConfig()
@@ -78,7 +99,7 @@ class TestModels(unittest.TestCase):
 
     def test_pdf_ocr_config_defaults(self):
         cfg = PDFOCRConfig()
-        self.assertEqual(cfg.min_dpi, 200)
+        self.assertEqual(cfg.min_dpi, 72)
         self.assertEqual(cfg.lang, "eng")
         self.assertEqual(cfg.upscale_factor, 1.5)
         self.assertTrue(cfg.enable_binarization)
@@ -92,8 +113,8 @@ class TestModels(unittest.TestCase):
         self.assertEqual(cfg.denoise_method, "bilateral")
         self.assertTrue(cfg.enable_osd)
         self.assertEqual(cfg.osd_min_confidence, 5.0)
-        self.assertEqual(cfg.psm, 6)
-        self.assertEqual(cfg.oem, 3)
+        self.assertEqual(cfg.psm, 3)
+        self.assertEqual(cfg.oem, 1)
         self.assertTrue(cfg.strip_empty_lines)
 
     def test_pdf_reader_config_defaults(self):
@@ -107,6 +128,25 @@ class TestModels(unittest.TestCase):
         self.assertTrue(cfg.enable_metadata)
         self.assertTrue(cfg.enable_images)
         self.assertTrue(cfg.enable_tables)
+
+    def test_parsed_and_dl_configs(self):
+        parsed = Parsed(metadata={"a": 1})
+        self.assertEqual(parsed.metadata, {"a": 1})
+        self.assertEqual(parsed.tables, [])
+        self.assertIsNone(parsed.caption)
+
+        bbox = BoundingBox(xmin=1.0, ymin=2.0, xmax=3.0, ymax=4.0)
+        self.assertEqual(bbox.as_tuple(), (1.0, 2.0, 3.0, 4.0))
+
+        self.assertEqual(CaptionConfig().max_new_tokens, 50)
+        self.assertEqual(FlowchartConfig().min_area, 1500)
+        self.assertEqual(TableDetectionConfig().default_threshold, 0.7)
+        self.assertEqual(RegionSplitterConfig().threshold, 0.15)
+
+        self.assertIn("TextBlockRegion", repr(TextBlockRegion((0, 0, 10, 10))))
+        self.assertIn("FlowchartRegion", repr(FlowchartRegion((0, 0, 10, 10))))
+        self.assertIn("ImageRegion", repr(ImageRegion((0, 0, 10, 10))))
+        self.assertIn("TableRegion", repr(TableRegion((0, 0, 10, 10))))
 
 
 if __name__ == "__main__":

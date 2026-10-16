@@ -4,9 +4,9 @@ import logging
 import pytesseract
 from PIL import Image
 
-from nexum.common.ai.deep_learning.pdf_region_spitter import PDFRegionSplitterModel
 from nexum.common.errors import NexumRuntimeError
 from nexum.common.helpers.table import ocr_table_cells, extract_table_dataframe
+from nexum.detection.region import RegionDetectorDL
 from nexum.document.models import PDFOCRConfig, RegionType
 from nexum.document.models import RegionSplitterConfig
 from nexum.document.parser.base import BaseParser
@@ -22,10 +22,9 @@ class PDFOCRParser(BaseParser):
 
         splitter_config = RegionSplitterConfig(
             threshold=0.15,
-            device="cpu",
-            model_name="yolov8m-doclaynet.pt"
+            device="cpu"
         )
-        self.splitter = PDFRegionSplitterModel(splitter_config)
+        self.splitter = RegionDetectorDL(splitter_config)
 
     def parse(self, page_bytes: bytes) -> dict:
         try:

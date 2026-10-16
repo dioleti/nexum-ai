@@ -8,10 +8,10 @@ from nexum.document.reader.base import Reader
 
 class CSVReader(Reader):
     def __init__(
-        self,
-        loader,
-        config: CSVReaderConfig | None = None,
-        parser: CSVParser | None = None,
+            self,
+            loader,
+            config: CSVReaderConfig | None = None,
+            parser: CSVParser | None = None,
     ):
         super().__init__(loader)
         self.config = config or CSVReaderConfig()
@@ -32,14 +32,10 @@ class CSVReader(Reader):
     def _build_document(self, raw_bytes: bytes, text: str) -> Document:
         parsed = self.parser.parse(text)
 
-        if isinstance(parsed, dict):
-            raw_table = parsed.get("table") or (parsed.get("tables")[0] if parsed.get("tables") else None)
-            metadata = parsed.get("metadata")
-        else:
-            raw_table = getattr(parsed, "table", None)
-            if raw_table is None and hasattr(parsed, "tables") and getattr(parsed, "tables"):
-                raw_table = getattr(parsed, "tables")[0]
-            metadata = getattr(parsed, "metadata", None)
+        raw_table = getattr(parsed, "table", None)
+        if raw_table is None and hasattr(parsed, "tables") and getattr(parsed, "tables"):
+            raw_table = getattr(parsed, "tables")[0]
+        metadata = getattr(parsed, "metadata", None)
 
         if raw_table is None:
             table = Table(rows=[], columns=[])

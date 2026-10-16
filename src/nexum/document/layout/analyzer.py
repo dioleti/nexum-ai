@@ -15,34 +15,34 @@ from nexum.common.helpers.image import (
     binarize,
 )
 from nexum.document.layout.detectors.block import BlockDetector
-from nexum.document.layout.detectors.flowchart import FlowchartDetectorDL
+from nexum.document.layout.detectors.flowchart import FlowchartDetector
 from nexum.document.layout.detectors.image import ImageDetector
 from nexum.document.layout.detectors.table import TableDetector
 
 
 class LayoutAnalyzer:
     def __init__(
-        self,
-        enable_preprocess: bool = True,
-        enable_deskew: bool = True,
-        enable_clahe: bool = True,
-        enable_denoise: bool = True,
-        enable_sharpen: bool = True,
-        enable_binarize: bool = False,
-        enable_table_detector: bool = True,
-        enable_block_detector: bool = True,
-        enable_image_detector: bool = True,
-        enable_flowchart_detector_dl: bool = False,
-        deskew_max_angle: float = 10.0,
-        clahe_clip_limit: float = 40.0,
-        clahe_tile_size: tuple[int, int] = (8, 8),
-        denoise_method: str = "bilateral",
-        sharpen_sigma: float = 1.0,
-        sharpen_strength: float = 1.2,
-        sharpen_blur_weight: float = -0.2,
-        binarization_method: str = "adaptive",
-        adaptive_block_size: int = 31,
-        adaptive_c: int = 2
+            self,
+            enable_preprocess: bool = True,
+            enable_deskew: bool = True,
+            enable_clahe: bool = True,
+            enable_denoise: bool = True,
+            enable_sharpen: bool = True,
+            enable_binarize: bool = False,
+            enable_table_detector: bool = True,
+            enable_block_detector: bool = True,
+            enable_image_detector: bool = True,
+            enable_flowchart_detector_dl: bool = False,
+            deskew_max_angle: float = 10.0,
+            clahe_clip_limit: float = 40.0,
+            clahe_tile_size: tuple[int, int] = (8, 8),
+            denoise_method: str = "bilateral",
+            sharpen_sigma: float = 1.0,
+            sharpen_strength: float = 1.2,
+            sharpen_blur_weight: float = -0.2,
+            binarization_method: str = "adaptive",
+            adaptive_block_size: int = 31,
+            adaptive_c: int = 2
     ):
         self.enable_preprocess = enable_preprocess
         self.enable_deskew = enable_deskew
@@ -63,7 +63,7 @@ class LayoutAnalyzer:
         self.table_detector = TableDetector() if enable_table_detector else None
         self.block_detector = BlockDetector() if enable_block_detector else None
         self.image_detector = ImageDetector() if enable_image_detector else None
-        self.flowchart_detector = FlowchartDetectorDL() if enable_flowchart_detector_dl else None
+        self.flowchart_detector = FlowchartDetector() if enable_flowchart_detector_dl else None
 
     def _preprocess(self, gray: np.ndarray) -> np.ndarray:
         if not self.enable_preprocess:

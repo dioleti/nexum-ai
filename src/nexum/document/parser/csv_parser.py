@@ -1,17 +1,15 @@
 import csv as engine
 import logging
-from pprint import pprint
 from typing import Any
 
-from nexum.common.ai.deep_learning.column_classifier import TableSemanticClassifier
+from nexum.classification.column import ColumnSemanticClassifierDL
 from nexum.common.helpers.table import detect_table_boundaries
 from nexum.common.helpers.type import infer
+from nexum.common.models import ColumnSemanticResult, ColumnSemanticInput
 from nexum.document.models import (
-    ColumnSemanticResult,
     CSVReaderConfig,
     Parsed,
-    Table,
-    TableSemanticInput,
+    Table
 )
 from nexum.document.parser.base import BaseParser
 
@@ -20,15 +18,15 @@ logger = logging.getLogger(__name__)
 
 class CSVParser(BaseParser):
     def __init__(
-        self,
-        config: CSVReaderConfig | None = None,
-        classifier: TableSemanticClassifier | None = None,
+            self,
+            config: CSVReaderConfig | None = None,
+            classifier: ColumnSemanticClassifierDL | None = None,
     ):
         resolved_config = config or CSVReaderConfig()
         super().__init__(resolved_config)
         self.config: CSVReaderConfig = resolved_config
-        self.classifier: TableSemanticClassifier = (
-            classifier or TableSemanticClassifier()
+        self.classifier: ColumnSemanticClassifierDL = (
+                classifier or ColumnSemanticClassifierDL()
         )
 
     def _apply_type_inference(self, rows: list[list[str]]) -> list[list[Any]]:
@@ -57,7 +55,7 @@ class CSVParser(BaseParser):
         return rows
 
     def _build_table(
-        self, rows: list[list[str]]
+            self, rows: list[list[str]]
     ) -> tuple[Table, dict[str, ColumnSemanticResult]]:
         if not rows:
             return Table(columns=[], rows=[], bbox=None, page=1), {}
@@ -73,17 +71,17 @@ class CSVParser(BaseParser):
         data = self._apply_type_inference(data)
 
         column_semantics = self.classifier.predict(
-            TableSemanticInput(columns=columns, data=data)
+            ColumnSemanticInput(columns=columns, data=data)
         )
 
         table = Table(columns=columns, rows=data, bbox=None, page=1)
         return table, column_semantics
 
     def _build_metadata(
-        self,
-        table: Table,
-        column_semantics: dict[str, ColumnSemanticResult],
-        encoding: str | None = "utf-8",
+            self,
+            table: Table,
+            column_semantics: dict[str, ColumnSemanticResult],
+            encoding: str | None = "utf-8",
     ) -> dict[str, Any]:
         pii_columns = [
             col for col, res in column_semantics.items() if res.is_pii
@@ -131,11 +129,3 @@ class CSVParser(BaseParser):
 
         parsed = Parsed(metadata=metadata, tables=[table], rows=rows)
         return parsed
-
-
-if __name__ == "__main__":
-    config = CSVReaderConfig()
-    parser = CSVParser(config)
-    with open("D:\\docs\\data.csv", "r", encoding="utf-8") as file:
-        rows = parser.parse(file.read())
-        pprint(rows)

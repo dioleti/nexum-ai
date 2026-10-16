@@ -10,36 +10,29 @@ from nexum.common.helpers.image import (
     sharpen,
     binarize,
 )
-
-
-class TextBlockRegion:
-    def __init__(self, bbox: Tuple[int, int, int, int]):
-        self.bbox = bbox
-
-    def __repr__(self):
-        return f"TextBlockRegion(bbox={self.bbox})"
+from nexum.document.models import TextBlockRegion
 
 
 class BlockDetector:
     def __init__(
-        self,
-        enable_deskew: bool = True,
-        enable_clahe: bool = True,
-        enable_denoise: bool = True,
-        enable_sharpen: bool = True,
-        enable_binarize: bool = True,
-        min_block_area: int = 3000,
-        dilation_kernel_size: Tuple[int, int] = (25, 25),
-        deskew_max_angle: float = 10.0,
-        clahe_clip_limit: float = 40.0,
-        clahe_tile_size: tuple[int, int] = (8, 8),
-        denoise_method: str = "bilateral",
-        sharpen_sigma: float = 1.0,
-        sharpen_strength: float = 1.2,
-        sharpen_blur_weight: float = -0.2,
-        binarization_method: str = "adaptive",
-        adaptive_block_size: int = 31,
-        adaptive_c: int = 2,
+            self,
+            enable_deskew: bool = True,
+            enable_clahe: bool = True,
+            enable_denoise: bool = True,
+            enable_sharpen: bool = True,
+            enable_binarize: bool = True,
+            min_block_area: int = 3000,
+            dilation_kernel_size: Tuple[int, int] = (25, 25),
+            deskew_max_angle: float = 10.0,
+            clahe_clip_limit: float = 40.0,
+            clahe_tile_size: tuple[int, int] = (8, 8),
+            denoise_method: str = "bilateral",
+            sharpen_sigma: float = 1.0,
+            sharpen_strength: float = 1.2,
+            sharpen_blur_weight: float = -0.2,
+            binarization_method: str = "adaptive",
+            adaptive_block_size: int = 31,
+            adaptive_c: int = 2,
     ):
         self.min_block_area = min_block_area
         self.dilation_kernel_size = dilation_kernel_size

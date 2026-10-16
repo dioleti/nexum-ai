@@ -1,13 +1,11 @@
-import io
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from PIL import Image
-
 from pypdf.generic import DictionaryObject
 
 from nexum.common.errors import NexumRuntimeError
-from nexum.document.models import PDFReaderConfig, Table, Document, VisualRegion
+from nexum.document.models import Document, PDFReaderConfig, Table
 from nexum.document.parser.pdf import PDFOCRParser
 from nexum.document.reader.pdf_reader import PDFReader
 
@@ -29,6 +27,9 @@ class DummyLoader:
 
 
 class DummyOCR(PDFOCRParser):
+    def __init__(self, config=None):
+        self.config = config
+
     def parse(self, page_bytes: bytes) -> str:
         return "col1|col2\n1|2\n3|4"
 
@@ -42,12 +43,12 @@ class TestPDFReader(unittest.TestCase):
         return img
 
     def test_get_bytes_success(self):
-        reader = PDFReader(DummyLoader(self._pdf_bytes()))
+        reader = PDFReader(DummyLoader(self._pdf_bytes()), parser=DummyOCR())
         data = reader._get_bytes()
         self.assertEqual(data, self._pdf_bytes())
 
     def test_get_bytes_failure(self):
-        reader = PDFReader(DummyLoader(b"", should_fail=True))
+        reader = PDFReader(DummyLoader(b"", should_fail=True), parser=DummyOCR())
         with self.assertRaises(NexumRuntimeError):
             reader._get_bytes()
 
@@ -73,7 +74,7 @@ class TestPDFReader(unittest.TestCase):
         mock_pdf_reader_cls.return_value = mock_pdf_instance
 
         cfg = PDFReaderConfig(enable_metadata=True, enable_images=True)
-        reader = PDFReader(DummyLoader(self._pdf_bytes()), cfg)
+        reader = PDFReader(DummyLoader(self._pdf_bytes()), cfg, parser=DummyOCR())
 
         metadata, pages_text, images = reader._parse_digital_pdf(self._pdf_bytes())
         self.assertEqual(metadata, {"Title": "Test Doc"})
@@ -81,7 +82,7 @@ class TestPDFReader(unittest.TestCase):
         self.assertEqual(images, [b"raw_image_data"])
 
     def test_parse_visual_tables(self):
-        reader = PDFReader(DummyLoader(self._pdf_bytes()))
+        reader = PDFReader(DummyLoader(self._pdf_bytes()), parser=DummyOCR())
         table = reader._parse_visual_tables("col1\tcol2\nval1\tval2", 1, bbox=(0, 0, 10, 10))
         self.assertIsInstance(table, Table)
         self.assertEqual(table.columns, ["col1", "col2"])
@@ -89,7 +90,7 @@ class TestPDFReader(unittest.TestCase):
         self.assertEqual(table.page, 1)
 
     def test_parse_visual_tables_empty(self):
-        reader = PDFReader(DummyLoader(self._pdf_bytes()))
+        reader = PDFReader(DummyLoader(self._pdf_bytes()), parser=DummyOCR())
         table = reader._parse_visual_tables("   ", 1)
         self.assertEqual(table.columns, [])
         self.assertEqual(table.rows, [])
@@ -104,7 +105,7 @@ class TestPDFReader(unittest.TestCase):
         mock_pdf_reader_cls.return_value = mock_pdf_instance
 
         cfg = PDFReaderConfig(enable_ocr=False)
-        reader = PDFReader(DummyLoader(self._pdf_bytes()), cfg)
+        reader = PDFReader(DummyLoader(self._pdf_bytes()), cfg, parser=DummyOCR())
         doc = reader.read()
 
         self.assertIsInstance(doc, Document)
@@ -115,7 +116,7 @@ class TestPDFReader(unittest.TestCase):
     @patch("nexum.document.reader.pdf_reader.PdfReader")
     def test_read_pdf_with_ocr(self, mock_pdf_reader_cls, mock_convert):
         mock_page = MagicMock()
-        mock_page.extract_text.return_value = ""  # No digital text
+        mock_page.extract_text.return_value = ""
         mock_pdf_instance = MagicMock()
         mock_pdf_instance.metadata = {}
         mock_pdf_instance.pages = [mock_page]
@@ -127,13 +128,12 @@ class TestPDFReader(unittest.TestCase):
         dummy_ocr = DummyOCR(cfg.ocr_config)
         reader = PDFReader(DummyLoader(self._pdf_bytes()), cfg, parser=dummy_ocr)
 
-        # Mock layout analyzer inside reader
         reader.layout = MagicMock()
         reader.layout.run_detectors.return_value = {
             "tables": [],
             "blocks": [],
             "images": [],
-            "flowcharts": []
+            "flowcharts": [],
         }
 
         doc = reader.read()
@@ -150,7 +150,7 @@ class TestPDFReader(unittest.TestCase):
         mock_pdf_reader_cls.return_value = mock_pdf_instance
 
         cfg = PDFReaderConfig(enable_ocr=False)
-        reader = PDFReader(DummyLoader(self._pdf_bytes()), cfg)
+        reader = PDFReader(DummyLoader(self._pdf_bytes()), cfg, parser=DummyOCR())
         docs = list(reader.read_streaming())
 
         self.assertEqual(len(docs), 1)

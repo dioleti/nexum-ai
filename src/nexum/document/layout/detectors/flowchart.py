@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 
 import cv2
 import layoutparser as lp
@@ -11,35 +11,28 @@ from nexum.common.helpers.image import (
     sharpen,
     binarize,
 )
+from nexum.document.models import FlowchartRegion
 
 
-class FlowchartRegion:
-    def __init__(self, bbox: Tuple[int, int, int, int]):
-        self.bbox = bbox
-
-    def __repr__(self):
-        return f"FlowchartRegion(bbox={self.bbox})"
-
-
-class FlowchartDetectorDL:
+class FlowchartDetector:
     def __init__(
-        self,
-        enable_deskew: bool = True,
-        enable_clahe: bool = True,
-        enable_denoise: bool = True,
-        enable_sharpen: bool = True,
-        enable_binarize: bool = False,
-        score_threshold: float = 0.8,
-        deskew_max_angle: float = 10.0,
-        clahe_clip_limit: float = 40.0,
-        clahe_tile_size: tuple[int, int] = (8, 8),
-        denoise_method: str = "bilateral",
-        sharpen_sigma: float = 1.0,
-        sharpen_strength: float = 1.2,
-        sharpen_blur_weight: float = -0.2,
-        binarization_method: str = "adaptive",
-        adaptive_block_size: int = 31,
-        adaptive_c: int = 2,
+            self,
+            enable_deskew: bool = True,
+            enable_clahe: bool = True,
+            enable_denoise: bool = True,
+            enable_sharpen: bool = True,
+            enable_binarize: bool = False,
+            score_threshold: float = 0.8,
+            deskew_max_angle: float = 10.0,
+            clahe_clip_limit: float = 40.0,
+            clahe_tile_size: tuple[int, int] = (8, 8),
+            denoise_method: str = "bilateral",
+            sharpen_sigma: float = 1.0,
+            sharpen_strength: float = 1.2,
+            sharpen_blur_weight: float = -0.2,
+            binarization_method: str = "adaptive",
+            adaptive_block_size: int = 31,
+            adaptive_c: int = 2,
     ):
         self.score_threshold = score_threshold
         self.enable_deskew = enable_deskew
@@ -91,11 +84,8 @@ class FlowchartDetectorDL:
 
     def detect(self, rgb_image: np.ndarray) -> List[FlowchartRegion]:
         preprocessed_gray = self._preprocess(rgb_image)
-
         processed_rgb = cv2.cvtColor(preprocessed_gray, cv2.COLOR_GRAY2RGB)
-
         layout = self.model.detect(processed_rgb)
-
         figure_blocks = [block for block in layout if block.type == "Figure"]
 
         if not figure_blocks:

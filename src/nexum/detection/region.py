@@ -3,20 +3,21 @@ from typing import Sequence, List
 import numpy as np
 import torch
 from PIL import Image
+from huggingface_hub import hf_hub_download
 from ultralytics import YOLO
 
-from nexum.common.ai.deep_learning.base_model import StatefulModel
+from nexum.common.ai.base_model import StatefulModel
 from nexum.common.helpers.image import detect_images_heuristic, ocr_region
 from nexum.document.models import Region, RegionType, RegionSplitterConfig
 
 
-class PDFRegionSplitterModel(StatefulModel[Image.Image, List[Region]]):
+class RegionDetectorDL(StatefulModel[Image.Image, List[Region]]):
 
     def __init__(self, config: RegionSplitterConfig | None = None) -> None:
         self.config = config or RegionSplitterConfig()
         self.device = (
-            self.config.device
-            or ("cuda" if torch.cuda.is_available() else "cpu")
+                self.config.device
+                or ("cuda" if torch.cuda.is_available() else "cpu")
         )
         self.model: YOLO | None = None
 
@@ -26,7 +27,12 @@ class PDFRegionSplitterModel(StatefulModel[Image.Image, List[Region]]):
 
     def load(self) -> None:
         if not self.is_loaded:
-            self.model = YOLO("yolov8m-doclaynet.pt")
+            weights = hf_hub_download(
+                repo_id="Dioleti/olov8m-doclaynet",
+                filename="yolov8m-doclaynet.pt"
+            )
+
+            self.model = YOLO(weights)
             self.model.to(self.device)
 
     def unload(self) -> None:
@@ -38,7 +44,7 @@ class PDFRegionSplitterModel(StatefulModel[Image.Image, List[Region]]):
         return self.predict_batch([input_data])[0]
 
     def predict_batch(
-        self, inputs: Sequence[Image.Image]
+            self, inputs: Sequence[Image.Image]
     ) -> List[List[Region]]:
         if not inputs:
             return []
@@ -118,7 +124,7 @@ class PDFRegionSplitterModel(StatefulModel[Image.Image, List[Region]]):
         merged = list(yolo_regions)
 
         for img_region in heuristic_images:
-            if not any(PDFRegionSplitterModel._overlaps(img_region, r) for r in yolo_regions):
+            if not any(RegionDetectorDL._overlaps(img_region, r) for r in yolo_regions):
                 merged.append(img_region)
 
         return merged

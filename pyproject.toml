@@ -34,7 +34,10 @@ dependencies = [
     "tree-sitter-rust",
     "tree-sitter-javascript",
     "tree-sitter-typescript",
-    "tree-sitter-c-sharp"
+    "tree-sitter-c-sharp",
+    "tiktoken",
+    "timm",
+    "hf_hub_download"
 ]
 requires-python = ">=3.12"
 

@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 
 import cv2
 import numpy as np
@@ -10,37 +10,30 @@ from nexum.common.helpers.image import (
     sharpen,
     binarize,
 )
-
-
-class TableRegion:
-    def __init__(self, bbox: Tuple[int, int, int, int]):
-        self.bbox = bbox
-
-    def __repr__(self):
-        return f"TableRegion(bbox={self.bbox})"
+from nexum.document.models import TableRegion
 
 
 class TableDetector:
     def __init__(
-        self,
-        enable_deskew: bool = True,
-        enable_clahe: bool = True,
-        enable_denoise: bool = True,
-        enable_sharpen: bool = True,
-        enable_binarize: bool = True,
-        min_table_area: int = 5000,
-        line_thickness: int = 2,
-        morph_kernel_size: int = 15,
-        deskew_max_angle: float = 10.0,
-        clahe_clip_limit: float = 40.0,
-        clahe_tile_size: tuple[int, int] = (8, 8),
-        denoise_method: str = "bilateral",
-        sharpen_sigma: float = 1.0,
-        sharpen_strength: float = 1.2,
-        sharpen_blur_weight: float = -0.2,
-        binarization_method: str = "adaptive",
-        adaptive_block_size: int = 31,
-        adaptive_c: int = 2,
+            self,
+            enable_deskew: bool = True,
+            enable_clahe: bool = True,
+            enable_denoise: bool = True,
+            enable_sharpen: bool = True,
+            enable_binarize: bool = True,
+            min_table_area: int = 5000,
+            line_thickness: int = 2,
+            morph_kernel_size: int = 15,
+            deskew_max_angle: float = 10.0,
+            clahe_clip_limit: float = 40.0,
+            clahe_tile_size: tuple[int, int] = (8, 8),
+            denoise_method: str = "bilateral",
+            sharpen_sigma: float = 1.0,
+            sharpen_strength: float = 1.2,
+            sharpen_blur_weight: float = -0.2,
+            binarization_method: str = "adaptive",
+            adaptive_block_size: int = 31,
+            adaptive_c: int = 2,
     ):
         self.min_table_area = min_table_area
         self.line_thickness = line_thickness
