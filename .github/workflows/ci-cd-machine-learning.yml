@@ -1,0 +1,161 @@
+name: CI/CD Pipeline - Machine Learning
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - "machine-learning-v*"
+  pull_request:
+    paths:
+      - "machine_learning/**"
+      - ".github/workflows/ci-cd-machine-learning.yml"
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: machine_learning
+
+jobs:
+  test:
+    name: Unit Tests & Coverage (>= 80%)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "machine_learning/uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run Unittest with Coverage
+        run: |
+          uv run coverage run --source=nexum_ai_machine_learning -m unittest discover -s tests -v
+          uv run coverage report --fail-under=80 -m
+          uv run coverage xml
+
+      - name: Upload Coverage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-machine-learning
+          path: machine_learning/coverage.xml
+
+  lint:
+    name: Code Analysis (Lint & Type Check)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "machine_learning/uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run Ruff (Linter)
+        run: uv run ruff check nexum_ai_machine_learning/
+
+      - name: Run Mypy (Type Checker)
+        run: uv run mypy nexum_ai_machine_learning/
+
+  security:
+    name: Vulnerability Analysis (SAST & SCA)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "machine_learning/uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run Bandit (Static Security Analysis)
+        run: uv run bandit -r nexum_ai_machine_learning/ -ll
+
+      - name: Run pip-audit (Dependency Vulnerability Scan)
+        run: uv run pip-audit
+
+  publish:
+    name: Publish to PyPI
+    needs:
+      - lint
+      - security
+      - test
+    if: success() && startsWith(github.ref, 'refs/tags/machine-learning-v')
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/nexum-ai-machine-learning
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify annotated tag
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          git fetch --force --tags origin "refs/tags/${TAG_NAME}:refs/tags/${TAG_NAME}"
+          OBJ_TYPE=$(git cat-file -t "refs/tags/${TAG_NAME}")
+          echo "Tag $TAG_NAME is of type: $OBJ_TYPE"
+          if [ "$OBJ_TYPE" != "tag" ]; then
+            echo "::error::Tag '$TAG_NAME' is a lightweight tag ($OBJ_TYPE). Only annotated tags (git tag -a) starting with 'machine-learning-v' are allowed to trigger a release."
+            exit 1
+          fi
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync package version with Git tag
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/machine-learning-v}"
+          echo "Setting package version to $VERSION"
+          uv version "$VERSION"
+
+      - name: Build distribution packages
+        run: uv build
+
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: machine_learning/dist/

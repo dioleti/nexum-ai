@@ -1,0 +1,7 @@
+- [ ] Test multicloud readers and connectors
+- [ ] Retest DL models after refactor
+- [ ] Embeddings area
+- [ ] User prompt improvement
+- [x] Add deep learning to PDF parser
+- [x] Test document readers
+- [x] Add deep learning models to parsers

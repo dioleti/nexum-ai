@@ -1,0 +1,68 @@
+[project]
+name = "nexum-ai-common"
+version = "1.0.2"
+description = "Nexum AI Framework - Common Library Artifact"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Dioleti", email = "fabricio@dl.tec.br" }
+]
+dependencies = [
+    "numpy>=2.5.4",
+    "opencv-python>=5.0.0.93",
+    "pandas>=3.0.6",
+    "pillow>=13.0.0",
+    "pytesseract>=0.3.13",
+    "python-dotenv>=1.2.4",
+    "torch>=2.14.1",
+]
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+dev = [
+    "mypy",
+    "ruff"
+]
+datadog = [
+    "ddtrace>=4.11.0"
+]
+elastic = [
+    "elastic-apm>=6.26.2"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+import_mode = "importlib"
+
+[tool.hatch.build.targets.wheel]
+packages = ["nexum_ai_common"]
+
+[tool.mypy]
+ignore_missing_imports = true
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = "."
+exclude = [
+    ".venv",
+    "tests/"
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "mypy-boto3-s3",
+    "coverage>=7.6.0",
+    "ruff>=0.9.0",
+    "mypy>=1.14.0",
+    "bandit>=1.8.0",
+    "pip-audit>=2.7.3",
+]
+
+[tool.ruff]
+exclude = ["tests/"]
+
+[tool.ruff.lint]
+ignore = ["BLE001"]
